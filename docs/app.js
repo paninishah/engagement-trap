@@ -267,30 +267,51 @@ function setupSearch() {
   input.addEventListener("blur", close);
 }
 
-function setupControls(rerank) {
-  state.lam = rerank.lambda;
-  state.cap = rerank.cap.kmeans;
+// The page opens on a strong setting so the difference is visible straight away.
+// The setting chosen on validation in notebook 03 (MMR, rerank.lambda) is one click away.
+const DEMO_START = { method: "cap", cap: 1 };
+
+// Make the controls and the note match state, then recompute the lists.
+function syncControls(validatedLam) {
+  document.querySelectorAll("[data-method]").forEach((x) => x.classList.toggle("active", x.dataset.method === state.method));
+  document.querySelectorAll("[data-cap]").forEach((x) => x.classList.toggle("active", Number(x.dataset.cap) === state.cap));
+  $("control-lambda").hidden = state.method !== "mmr";
+  $("control-cap").hidden = state.method !== "cap";
   $("lambda").value = String(state.lam);
   $("lambda-value").textContent = state.lam.toFixed(2);
-  document.querySelectorAll("[data-cap]").forEach((b) => b.classList.toggle("active", Number(b.dataset.cap) === state.cap));
+
+  const isValidated = state.method === "mmr" && Math.abs(state.lam - validatedLam) < 1e-9;
+  const isDemoStart = state.method === DEMO_START.method && state.cap === DEMO_START.cap;
+  $("setting-note-text").textContent = isValidated
+    ? `This is the setting chosen on validation data (MMR, λ = ${validatedLam.toFixed(2)}): the most variety that kept 95% of plain SVD's accuracy. At this level the lists differ only slightly.`
+    : isDemoStart
+      ? `The demo starts on a strong setting (at most 1 film per taste group) so the difference is easy to see. The setting chosen on validation data is MMR, λ = ${validatedLam.toFixed(2)}.`
+      : `The setting chosen on validation data is MMR, λ = ${validatedLam.toFixed(2)}.`;
+  $("btn-validated").hidden = isValidated;
+  recommend();
+}
+
+function setupControls(rerank) {
+  const validatedLam = rerank.lambda;
+  Object.assign(state, DEMO_START, { lam: validatedLam });
 
   $("lambda").addEventListener("input", (e) => {
     state.lam = Number(e.target.value);
-    $("lambda-value").textContent = state.lam.toFixed(2);
-    recommend();
+    syncControls(validatedLam);
   });
   document.querySelectorAll("[data-method]").forEach((b) => b.addEventListener("click", () => {
     state.method = b.dataset.method;
-    document.querySelectorAll("[data-method]").forEach((x) => x.classList.toggle("active", x === b));
-    $("control-lambda").hidden = state.method !== "mmr";
-    $("control-cap").hidden = state.method !== "cap";
-    recommend();
+    syncControls(validatedLam);
   }));
   document.querySelectorAll("[data-cap]").forEach((b) => b.addEventListener("click", () => {
     state.cap = Number(b.dataset.cap);
-    document.querySelectorAll("[data-cap]").forEach((x) => x.classList.toggle("active", x === b));
-    recommend();
+    syncControls(validatedLam);
   }));
+  $("btn-validated").addEventListener("click", () => {
+    Object.assign(state, { method: "mmr", lam: validatedLam });
+    syncControls(validatedLam);
+  });
+  syncControls(validatedLam);
   $("btn-example").addEventListener("click", () => {
     state.picks = EXAMPLE_PICKS
       .map((t) => state.movies.find((m) => m.title.startsWith(t)))

@@ -78,7 +78,7 @@
       <p class="section-intro">
         Pick a few films you like. The SVD model turns your picks into a taste profile and ranks every other
         film. On the left is the plain, accuracy-only top 10. On the right, the same scores are re-ranked for
-        variety. Move the slider and watch what changes, and what the model's own score barely notices.
+        variety. Change the setting and watch what changes in the list, and how little the model's own score moves at gentle settings.
       </p>
 
       <div class="picker">
@@ -116,6 +116,10 @@
           </div>
         </div>
       </div>
+      <p class="setting-note" id="setting-note">
+        <span id="setting-note-text"></span>
+        <button type="button" class="link-btn" id="btn-validated">Use the validated setting</button>
+      </p>
 
       <div class="empty" id="empty-state">
         Pick at least one film, or use the example picks, to see recommendations.
