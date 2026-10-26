@@ -1,0 +1,4 @@
+seed,svd_k,MMR,KMeans-cap,DBSCAN-cap
+0,40,0.7,3,1
+1,40,0.7,3,1
+2,40,0.8,3,2

@@ -1,0 +1,10 @@
+# MovieLens raw data must not be redistributed (GroupLens licence)
+data/
+ml-100k/
+*.zip
+
+# notebook outputs when run locally (Kaggle writes to /kaggle/working instead)
+outputs/
+
+__pycache__/
+.ipynb_checkpoints/
