@@ -44,6 +44,16 @@ Everything runs on CPU. No GPU is needed.
 
 If you edit `etlib.py`, upload it as a new version of the `engagement-trap-lib` dataset before re-running.
 
+## Demo site (`docs/`)
+
+A static page with no build step and no server: `index.html`, `style.css`, `app.js`, plus the JSON files the notebooks exported (in `docs/data/`). Visitors pick films they like. The browser folds them into the SVD model and shows the plain top-10 next to a diversity-aware (MMR or K-Means-cap) top-10. Below that come the simulation and model-comparison charts.
+
+- **GitHub Pages:** repo *Settings* → *Pages* → *Deploy from a branch* → `main`, folder `/docs`.
+- **Vercel:** import the repo and set the root directory to `docs` (no framework, no build command).
+- **Locally:** `python -m http.server 8000 --directory docs`, then open http://localhost:8000. Opening `index.html` directly won't load the data.
+
+To refresh the page after re-running the notebooks, copy each notebook's `demo_data/*.json` into `docs/data/`.
+
 ## Running locally (optional)
 
 ```bash

@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Engagement Trap</title>
+<meta name="description" content="A movie recommender on MovieLens, and what a click metric can't see: how narrow the recommendations are.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="logo" href="#top" aria-label="The Engagement Trap, back to top">ET</a>
+    <nav>
+      <a href="#try">Try it</a>
+      <a href="#simulation">Simulation</a>
+      <a href="#models">Models</a>
+      <a href="#about">How it works</a>
+      <a class="nav-code" href="https://github.com/paninishah/engagement-trap">Code&nbsp;↗</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================================================ hero -->
+  <section class="hero wrap">
+    <p class="kicker">Machine Learning Lab · Mini Project · MovieLens</p>
+    <h1>The Engagement Trap</h1>
+
+    <div class="lede">
+      <p>
+        Recommender systems are trained to predict what you will click or rate highly. That number is a
+        <em>proxy</em>: what we actually want is for people to find films they enjoy across the whole
+        catalogue. This project asks what the proxy can and cannot see.
+      </p>
+      <p>
+        We built four recommenders on real MovieLens ratings, added a diversity-aware re-ranking step, and
+        simulated thirty rounds of users clicking recommendations while the system retrained on those clicks.
+        The answer: <strong>a click metric is blind to how narrow a recommender is.</strong> Two systems with
+        the same click rate showed people very different amounts of the catalogue. Narrowness has to be
+        measured separately, and a simple re-ranking step widens it at little cost.
+      </p>
+    </div>
+
+    <div class="headline-stats" id="headline-stats">
+      <div class="stat">
+        <span class="stat-value" id="stat-coverage">—</span>
+        <span class="stat-label">Share of the catalogue ever shown after 30 simulated rounds: plain SVD vs. with MMR re-ranking</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-ctr">—</span>
+        <span class="stat-label">Click rate in the final round for the same two systems: no meaningful difference</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-knn">—</span>
+        <span class="stat-label">ItemKNN rating error (RMSE, best of four) vs. its top-10 quality (NDCG@10, nearly the worst)</span>
+      </div>
+    </div>
+
+    <dl class="specs">
+      <div><dt>Dataset</dt><dd>MovieLens <em>ml-latest-small</em> (GroupLens). 610 users; movies with at least 5 ratings, giving 3,650 movies and 90,274 ratings on a 0.5–5 star scale.</dd></div>
+      <div><dt>Algorithms compared</dt><dd>Linear Regression (ridge bias model) · Item-based KNN · SVD matrix factorisation · Content-based filtering on PCA-compressed genre and decade features. Popularity as a reference line.</dd></div>
+      <div><dt>Novelty</dt><dd>Diversity-aware re-ranking (Maximal Marginal Relevance, and cluster caps using K-Means vs. DBSCAN clusters), and a feedback-loop simulation whose hidden user model is a Logistic Regression.</dd></div>
+      <div><dt>Evaluation</dt><dd>Per-user 80/20 split, 3 seeds, hyperparameters tuned on a validation split carved from training data. RMSE, MAE, Precision/Recall/NDCG@10, catalogue coverage, exposure Gini, genre diversity, average popularity.</dd></div>
+      <div><dt>Code</dt><dd><a href="https://github.com/paninishah/engagement-trap">github.com/paninishah/engagement-trap</a>: four Kaggle notebooks, one shared library, and every result file shown on this page.</dd></div>
+    </dl>
+  </section>
+
+  <!-- ============================================================ try it -->
+  <section class="band" id="try">
+    <div class="wrap">
+      <h2>Try it</h2>
+      <p class="section-intro">
+        Pick a few films you like. The SVD model turns your picks into a taste profile and ranks every other
+        film. On the left is the plain, accuracy-only top 10. On the right, the same scores are re-ranked for
+        variety. Move the slider and watch what changes, and what the model's own score barely notices.
+      </p>
+
+      <div class="picker">
+        <div class="search">
+          <label for="search-input" class="control-label">Search films</label>
+          <input id="search-input" type="text" autocomplete="off" placeholder="e.g. Toy Story, Amelie, Alien…" aria-controls="search-results">
+          <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+        </div>
+        <div class="picker-actions">
+          <button type="button" class="btn" id="btn-example">Use example picks</button>
+          <button type="button" class="btn btn-quiet" id="btn-clear">Clear</button>
+        </div>
+      </div>
+      <ul class="picks" id="picks" aria-label="Your picks"></ul>
+
+      <div class="controls">
+        <div class="control">
+          <span class="control-label">Variety method</span>
+          <div class="segmented" role="group" aria-label="Variety method">
+            <button type="button" data-method="mmr" class="seg active">MMR</button>
+            <button type="button" data-method="cap" class="seg">K-Means cap</button>
+          </div>
+        </div>
+        <div class="control" id="control-lambda">
+          <label class="control-label" for="lambda">λ, relevance vs. variety: <strong id="lambda-value">0.70</strong></label>
+          <input type="range" id="lambda" min="0.3" max="1" step="0.05" value="0.7">
+          <div class="range-ends"><span>more variety</span><span>pure accuracy</span></div>
+        </div>
+        <div class="control" id="control-cap" hidden>
+          <span class="control-label">Max films per taste group</span>
+          <div class="segmented" role="group" aria-label="Cap per cluster">
+            <button type="button" data-cap="1" class="seg">1</button>
+            <button type="button" data-cap="2" class="seg">2</button>
+            <button type="button" data-cap="3" class="seg active">3</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty" id="empty-state">
+        Pick at least one film, or use the example picks, to see recommendations.
+      </div>
+
+      <div class="lists" id="lists" hidden>
+        <div class="list-col">
+          <h3>Accuracy only <span class="sub">plain SVD</span></h3>
+          <ol class="movie-list" id="list-left"></ol>
+          <dl class="list-stats" id="stats-left"></dl>
+        </div>
+        <div class="list-col">
+          <h3>With variety <span class="sub" id="right-sub">MMR, λ = 0.70</span></h3>
+          <ol class="movie-list" id="list-right"></ol>
+          <dl class="list-stats" id="stats-right"></dl>
+        </div>
+      </div>
+      <p class="fine-print">
+        Films marked <span class="new-tag">new</span> are not in the accuracy-only list. <em>Model score</em> is the SVD
+        model's own predicted appeal of the list, relative to the accuracy-only list. It is not a real click
+        rate. <em>Taste groups</em> are K-Means clusters of the SVD movie embeddings. Popularity is the number of
+        ratings a film has; the median film in the data has 13.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ simulation -->
+  <section class="wrap" id="simulation">
+    <h2>What the simulation showed</h2>
+    <p class="section-intro">
+      Thirty rounds, 610 simulated users, 10 films shown per user per round. Each round the recommender
+      retrains on every click so far. Users click according to a hidden Logistic Regression model of their
+      taste (held-out AUC ≈ 0.78), which the recommender never sees. Lines are the mean of 3 seeds.
+    </p>
+
+    <ul class="legend" id="sim-legend" aria-label="Policies"></ul>
+
+    <div class="chart-pair">
+      <figure class="chart-card">
+        <figcaption>
+          <span class="chart-title">Click rate per round</span>
+          <span class="chart-sub">the proxy the system can see</span>
+        </figcaption>
+        <div class="chart-box"><canvas id="chart-ctr" aria-label="Click rate per round for each policy" role="img"></canvas></div>
+      </figure>
+      <figure class="chart-card">
+        <figcaption>
+          <label class="chart-select">
+            <span class="visually-hidden">Metric to plot</span>
+            <select id="sim-metric"></select>
+          </label>
+          <span class="chart-sub">pick a metric</span>
+        </figcaption>
+        <div class="chart-box"><canvas id="chart-metric" aria-label="Selected metric per round for each policy" role="img"></canvas></div>
+      </figure>
+    </div>
+
+    <p class="takeaway" id="sim-takeaway"></p>
+
+    <details class="table-view">
+      <summary>Show final-round numbers as a table</summary>
+      <div class="table-scroll"><table id="sim-table"></table></div>
+    </details>
+  </section>
+
+  <!-- ============================================================ models -->
+  <section class="band" id="models">
+    <div class="wrap">
+      <h2>How the models compare</h2>
+      <p class="section-intro">
+        Test-set results, mean ± std over 3 seeds. The model that predicts star ratings best is not the one
+        that makes the best top-10 lists.
+      </p>
+      <div class="table-scroll"><table class="models-table" id="models-table"></table></div>
+      <p class="fine-print" id="selection-note"></p>
+
+      <figure class="chart-card wide">
+        <figcaption>
+          <span class="chart-title">Accuracy vs. catalogue coverage for each re-ranking setting</span>
+          <span class="chart-sub">SVD top-10 lists on test; up and to the right is better</span>
+        </figcaption>
+        <ul class="legend" id="tradeoff-legend" aria-label="Methods"></ul>
+        <div class="chart-box tall"><canvas id="chart-tradeoff" aria-label="NDCG at 10 versus coverage for MMR and cluster caps" role="img"></canvas></div>
+      </figure>
+      <p class="takeaway">
+        MMR gives a smooth dial: small amounts of variety cost very little accuracy. K-Means caps push harder
+        against popular films. DBSCAN finds essentially one giant cluster in these embeddings, so capping by its
+        clusters makes coverage worse. That is a real finding about density-based clustering, not a bug.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ about -->
+  <section class="wrap" id="about">
+    <h2>How it works</h2>
+    <div class="about-grid">
+      <div>
+        <h3>The pipeline</h3>
+        <ol class="steps">
+          <li><strong>Data.</strong> Ratings are filtered to films with at least 5 ratings, ids re-indexed, genres one-hot encoded and the release year parsed from the title.</li>
+          <li><strong>Four recommenders.</strong> Linear Regression learns a bias for every user and film. KNN predicts from the most similar films you rated. SVD factorises the mean-centred rating matrix into user and film vectors. The content model regresses each user's ratings on PCA components of film metadata.</li>
+          <li><strong>Re-ranking.</strong> MMR builds each list one film at a time, trading predicted relevance against similarity to films already chosen. Cluster caps limit how many films may come from one K-Means or DBSCAN cluster.</li>
+          <li><strong>Feedback loop.</strong> A Logistic Regression trained on genre affinity, mean ratings and popularity plays the hidden user. Its clicks, discounted by list position, become the next round's training data.</li>
+        </ol>
+      </div>
+      <div>
+        <h3>What this page does live</h3>
+        <p>
+          The SVD model was trained in the notebooks; this page only holds its 40-number vector for each film.
+          When you pick films, your browser solves a small ridge regression to find the user vector that best
+          explains liking them. This is called <em>fold-in</em>. Every film's score is the dot product of the two
+          vectors. Re-ranking then runs on the top 100 candidates. Nothing is sent anywhere.
+        </p>
+        <h3>Limits</h3>
+        <ul class="limits">
+          <li>Three seeds give means and spreads, not significance tests.</li>
+          <li>Offline metrics only reward films a user happened to rate, which favours popular films.</li>
+          <li>The validation rule picked a different "best" model than the test results; both are reported.</li>
+          <li>The simulation is a model of users, not real users: fixed tastes, an assumed position bias, and films never re-shown after a click.</li>
+          <li>Exposure stayed stuck rather than collapsing, and more variety did not help users reach more of their best matches.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <p>
+      Data: MovieLens ml-latest-small, © GroupLens Research, University of Minnesota. Used under its licence;
+      no endorsement implied. F. M. Harper and J. A. Konstan, "The MovieLens Datasets: History and Context",
+      ACM TiiS 5(4), 2015.
+    </p>
+    <p><a href="https://github.com/paninishah/engagement-trap">Source code and notebooks ↗</a></p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 # MovieLens raw data must not be redistributed (GroupLens licence)
-data/
+/data/
+notebooks/data/
 ml-100k/
 *.zip
 
